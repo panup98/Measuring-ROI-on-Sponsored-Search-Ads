@@ -1,0 +1,352 @@
+---
+title: "Measuring ROI on Sponsered Search"
+output:
+  pdf_document: default
+---
+
+# Experiment Overview
+
+Bazaar uses both display advertising and search engine advertising, running paid
+search ads on the two major search engines, Google and Bing.
+
+Bazaar releases its ads in response to keywords used by online consumers; 
+the marketing team classifies these keywords into two broad categories: 
+branded and non branded. 
+
+Branded keywords include keywords such as “Bazaar,” “Bazaar shoes,” and 
+“Bazaar guitar” that contain the Bazaar brand name.
+
+Non branded keywords include keywords such as “shoes” and “guitar” that do not 
+contain the Bazaar brand name.
+
+The firm employs the same strategies for both Google and Bing for targeting ads,
+choosing keywords to advertise on, and ad copies used, and the mix of potential 
+customers visiting the company’s website from both search engines is virtually 
+identical; the only difference is that their Bing campaign is much smaller than 
+their Google campaign.
+
+# Experiment Setup
+
+We used data from 12 weeks, which included average organic search results, 
+sponsored branded terms, and data from various platforms (Google, Bing, Yahoo, 
+and Ask).
+
+The technical issue prevented sponsored adverts on the Google platform between 
+weeks 10–12. The keyword advertising are aired continuously for 12 weeks on the 
+other sites. 
+
+We wish to comprehend the causal impact of the advertisements given the 
+circumstances. The week 10–12 Google sponsored ad interruptions are the treatment.
+Other search engines including Bing, Yahoo, and Ask serve as the control group 
+while Google serves as the therapy group.
+
+
+# Threats to Causal Inference
+
+### 1. Selection Bias
+
+To prevent selection bias, it is ideal for experiment subjects to be 
+substantially similar to one another and to the larger population from which 
+they are selected. In our instance, it's safe to believe that this experimental 
+design wouldn't result in selection bias because the ad techniques, keyword bids, 
+and mix of potential buyers visiting a website are the same across Google and 
+other search engines.
+
+### 2. Omitted Variable Bias
+
+We believe that some external factors that are not represented in the data set 
+may also have an impact on this experiment. For instance, the Google search 
+engine may experience additional technical difficulties that we were unaware 
+of, or Bazaar's rivals may choose to use a specific search engine for a brief 
+period of intense advertising.
+
+### 3. Simultaneity Bias
+
+Bidirectional effects between the independent and dependent variables are not 
+taken into account in this experiment due to simultaneity bias.
+In other words, although website visits may occasionally also have an impact on 
+ad clicks, only ad clicks are considered to influence website visits in the 
+experiment.
+Because consumers may compare Bazaar items to those of their rivals while making
+their final purchasing choice, leading to an increase in ad clicks.
+
+### 4. Measurement Error
+
+Since we're unsure whether customers actually viewed the advertisement, there 
+may be some problems with sponsored ad click-through measurement. It's very 
+possible that customers accidentally clicked the advertisement and then quickly 
+left the landing page.
+
+# Importing Packages
+
+```{r}
+library(dplyr)
+library(plm)
+library(ggplot2)
+```
+
+# Data Overview
+
+The data set is weekly average traffic data through four platforms(Google, Bing,
+Yahoo, Ask) for 12 weeks. 
+After importing the data, we created a “treatment” variable for test vs. control
+groups, an “after” variable that indicates 1 for treatment weeks and 0 for 
+pre-treatment weeks and a "total_traffic" variable to aggregate the sponsored 
+and organic traffic.
+
+```{r}
+data = read.csv('did_sponsored_ads.csv')
+treatment_week = c(10,11,12)
+data <- data %>% mutate(treatment = ifelse(platform == 'goog',1,0),
+                       after = ifelse(week %in% treatment_week,1,0),
+                       total_traffic = avg_spons + avg_org)
+```
+
+#### Data description: 
+
+```{r}
+summary(data)
+```
+
+#### Natural Experiment Visualization:
+
+```{r,fig.show = "hold", out.width = "60%"}
+ggplot(data %>% filter(platform == 'goog'), aes(x=week, y= avg_spons, color = 'Google')) +
+  geom_line() +
+  scale_y_continuous(sec.axis = sec_axis(~./6)) +
+  scale_x_continuous(breaks = seq(1, 12, by = 1)) +
+  labs(y = "Average Sponsored", x = "Week") +
+  theme_bw() +
+  theme(legend.title = element_blank())
+```
+
+As observed from the graph above, at week 9 there was a glitch with Google Ad
+campaign.For the week 10, 11 and 12 there was no sponsored Ad on Google,
+which explains the sudden drop and Zero values for those three weeks.
+
+
+# Question1: What  is  Wrong  with  Bob’s  RoI  Calculation? 
+
+Sponsored advertisements play a crucial role in the survival and growth of 
+businesses, and they also make up a sizable portion of overall operating costs.
+But evaluating the ROI of advertising spend has never been easy.
+
+We discovered that revenue inflation was the primary cause of Bob's incorrect 
+ROI calculation.That is to say, Bob failed to take into account one of the 
+behaviors of those who use sponsored advertisements to find the website and 
+make a purchase.
+
+Only a small portion of users who click on sponsored adverts actually visit 
+Bazaar's website as a result. Others will still access the website via organic 
+links to make purchases even if they don't see the product promoted in a search 
+engine.
+
+As a result, these individuals' income is not derived from sponsored 
+advertisements. The marketing analytics team may overestimate revenue and ROI 
+if they treat all user clicks on sponsored advertising as real.
+
+The error suggests that a portion of people who searched for branded keywords 
+already had the intention to visit Bazaar.com, logically this portion of people 
+is not driven by the sponsored ads.
+
+The current ROI calculation assumes that everyone who clicked on the sponsored 
+ads was casually driven by the sponsored ads. Instead, regardless of whether 
+sponsored ads were present or not, people would still access the website via an 
+organic link, hence their inclusion in the ROI calculation is unnecessary.)
+
+# Question 2: Define the Treatment and Control.
+
+In this case, treatment consists of disabling sponsored search advertising on 
+Google for the 10th, 11th, and 12th weeks. Bing, Yahoo, and Ask served as the 
+control groups, with Google serving as the treatment group.
+
+# Question 3: Consider a First Difference Estimate.
+
+One approach we might take(if we could only observe the treated unit) would be to
+calculate the first difference (that is, the % change in web traffic arriving
+from Google; (after – before) / before). This estimate is the pre-post difference 
+in the treated cohort.
+
+```{r}
+google<- data %>% filter(platform == "goog") 
+
+model1 <- lm(log(total_traffic) ~ after, data = google)
+
+summary(model1)
+
+exp(coef(summary(model1))[2])-1
+```
+
+We noticed a weekly reduction in total visits to the website of 0.13% when there
+were no sponsored search advertising on Google.
+
+Due to the p-value of 0.998(which is > 0.05), we were unable to draw any 
+conclusions about whether there are differences between conditions involving and
+without sponsored advertisements.
+
+This is not the right technique to calculate the impact of sponsored advertisements.
+By using the pre-post estimate, we presupposed that the market would remain 
+stable and that traffic wouldn't alter as a result of external factors.
+
+Therefore, we only contrasted the therapy group's before- and after-treatment 
+data. To be more precise, week 1 through week 9 and week 10 through week 12 
+share the same search nature. There are no weekly seasonal differences.
+
+
+Establishing the causality of sponsored advertisements would be challenging 
+given all these presumptions. As a result, we used Difference in Difference (DiD).
+
+# Question 4: Calculate the Difference-in-Difference
+
+We first verified the presumption of parallel trends before calculating the 
+difference in differences estimate of the treatment impact.
+The pre-treatment weeks should show behavioral similarities between the treatment
+and control groups. Additionally, a strong counter factual for the treatment group 
+must exist.
+
+Visualization Showcasing Parallel Trends
+
+```{r,fig.show = "hold", out.width = "60%"}
+bing = data %>%  filter(platform %in%  c('bing')) %>% select(week, total_traffic)
+yahoo = data %>%  filter(platform %in%  c('yahoo')) %>% select(week, total_traffic)
+ask = data %>%  filter(platform %in%  c('ask')) %>% select(week, total_traffic)
+
+ggplot(data %>% filter(platform == 'goog'), aes(x=week, y= total_traffic, color = 'Google')) +
+  geom_line() +
+  geom_line(aes(x=week, y= total_traffic, color = 'Bing'), data = bing) +
+  geom_line(aes(x=week, y= total_traffic, color = 'Yahoo'), data = yahoo) +
+  geom_line(aes(x=week, y= total_traffic, color = 'Ask'), data = ask) +
+  geom_vline(xintercept = 9,color='red') +
+  scale_y_continuous(sec.axis = sec_axis(~./6)) +
+  scale_x_continuous(breaks = seq(1, 12, by = 1)) +
+  labs(y = "Total Traffic", x = "Week") +
+  theme_bw() +
+  theme(legend.title = element_blank())
+```
+
+Pre-treatment parallel trends were not visible in the aforementioned visualization. 
+However, to determine whether the post-treatment weeks are relevant whereas the 
+pre-treatment weeks are not, we employed the dynamic DiD.
+
+```{r}
+did_dynamic <- lm(total_traffic ~ treatment + factor(week) + treatment * factor(week),data=data)
+summary(did_dynamic)
+```
+The aforementioned finding showed that the assumption was false. We nonetheless 
+conducted a Difference in Difference regression comparing the treatment and 
+control groups despite the fact that the assumption wasn't supported in order 
+to determine the actual causality of the sponsored advertisements. Treatment, 
+After, and the interaction between Treatment and After would all be independent 
+variables for the DiD regression.
+
+```{r}
+did <- lm(total_traffic ~ treatment + after + treatment * after, data=data)
+summary(did)
+
+```
+
+Bazaar.com loses, on average, 9910 clicks per week without sponsored 
+advertisements on the Google network. The true causality for the sponsored 
+commercials is captured by the new treatment effect assessed above and above 
+the behavior of the control group. As a result of our knowledge of the behavior 
+of the control and treatment groups,this method is more accurate than the 
+pre-post estimate.
+
+# Question 5: Given Your Treatment Effect Estimate, Fix Bob's ROI Calculation
+
+Average probability of purchasing from Bazaar.com is 12% given they clicked onto
+the website and average margin per conversion is $21. 
+
+Hence average revenue per click is 0.12 x $21 = $2.52. 
+
+Average cost per click for a sponsored ad is $0.6. 
+
+Bob’s ROI calculation is 
+(Margin per conversion * probability of click - cost per click / cost per click) -
+($2.52 - $0.60) / ($0.60) =  320%.
+
+We needed a more precise estimate of the percentage of people who were causally 
+influenced by the sponsored ads in order to calculate the correct ROI.
+
+Given that sponsored advertising were no longer running, we needed to compute 
+the traffic that would have used organic search results in order to calculate 
+the percentage of traffic that was causally driven by ads. This was done in the 
+preceding section.
+
+
+```{r}
+did_organic <- lm(avg_org ~ treatment + after + treatment * after, data=data)
+summary(did_organic)
+
+```
+
+In the absence of running sponsored ads on Google, 2293 would have used organic 
+search results to visit Bazaar.com.
+
+C = A + B
+
+C = Total clicks from sponsored ads
+A = clicks truly motivated by sponsored ads 
+B = clicks by customers who would still visit Bazaar.com in the absence of 
+    sponsored ads (B)
+
+A = 9,910 (new treatment effect in did)
+B = 2,293 (new treatment effect in did_organic)
+
+Proportion of true traffic = A / (A+B) = 9,910 / (9,910+2,293) = 0.8120954 (81%)
+
+The new ROI should be (Margin per conversion * probability of click * proportion - cost per click) / cost per click
+
+New_ROI = ($21 * 0.12 * 0.8120954- 0.6)/0.6
+New_ROI = 241.080%
+
+
+```{r}
+New_ROI = (21 * 0.12 * 0.8120954 - 0.6)/0.6
+New_ROI
+
+```
+
+Based on the updated projected treatment effect, our revised ROI from sponsored 
+branded advertisements is 241%. The preceding figure of ROI 320% is reduced to 
+241% without the fictitious augmentation of sponsored ads revenue, which is 
+still a respectable return on investment in sponsored ads advertising.
+
+# Conclusion
+
+sponsored advertisements actually drive 81% of all visits. For the remaining 19%
+of branded keyword search visitors who still access the website through organic 
+links in the absence of sponsored adverts, Bazaar.com continues to pay a cost 
+per click of $0.6. Given that the corporation might have used this advertising 
+budget to fund alternative marketing initiatives, it represents an opportunity.
+
+
+We employed Difference-in-Difference through the following procedures to 
+determine the correct causal impact of sponsored adverts on Bazaar.com's traffic:
+
+1) Determine the initial difference between the weekly average traffic 
+(Ads + Organic) before and after the technical issue. Instead of the overall 
+treatment effect, this provides us with the raw effect of the Google search 
+sponsored advertising.
+
+2) Contrast Google's first level pre-post difference with that of other 
+search engines' first level pre-post differences. Since this step accounts 
+for potential con-founders like seasonal differences among weeks and market
+conditions, it establishes the actual incremental effect.
+
+
+We concluded that the remaining 19% of traffic was visiting Bazaar.com via 
+organic links as opposed to sponsored ads and that this 19% should be 
+disregarded when calculating the original ROI because, as shown from the new 
+treatment effects of the experiments, an average of 9.9K clicks per week are 
+lost in the absence of sponsored ads, which is roughly 81% of the weekly traffic.
+
+
+We recalculated a revised ROI from sponsored branded advertisements based on the
+two parameters mentioned above with the additional treatment effects.
+
+The prior calculation of ROI 320% is down to the current adjusted ROI 241% after
+weeding out the erroneous overvaluation of sponsored ads revenue and adjusted 
+opportunity cost, which is still a respectable return on investment in sponsored
+ads advertising.
+
