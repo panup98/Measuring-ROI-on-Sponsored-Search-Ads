@@ -6,9 +6,11 @@ Our client was interested in identifying patterns of testing performance differe
 
 By understanding these patterns, our client aimed to proactively communicate with relevant jurisdictions about areas that may have benefited from additional support. Ultimately, the goal was to take concrete actions that could help improve the persistence rates of those who were pursuing their high school equivalency diploma through our client's testing service.
 
-# Project Setup
+# Data Information
 We used data from 12 weeks, which included average organic search results, sponsored branded terms, and data from various platforms (Google, Bing, Yahoo, and Ask).
+
 The technical issue prevented sponsored adverts on the Google platform between weeks 10–12. The keyword advertising are aired continuously for 12 weeks on the other sites.
+
 We wish to comprehend the causal impact of the advertisements given the circumstances. The week 10–12 Google sponsored ad interruptions are the treatment. Other search engines including Bing, Yahoo, and Ask serve as the control group while Google serves as the therapy group.
 
 # Project Guide
